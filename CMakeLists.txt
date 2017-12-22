@@ -8,6 +8,7 @@ set(SOURCE_FILES
 	src/PrimeFactors.h
 	src/PrimeFactors.cpp
 	src/ThreadPool.h
+	src/ThreadPool.cpp
 	)
 
 add_executable(OOP_lab5 ${SOURCE_FILES})

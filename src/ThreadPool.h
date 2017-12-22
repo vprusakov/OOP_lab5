@@ -7,58 +7,29 @@
 #include <atomic>
 #include <condition_variable>
 #include <chrono>
+#include <iostream>
+#include <string>
 
 class ThreadPool {
 public:
-	ThreadPool() : done(false) {
-		unsigned const thread_count = std::thread::hardware_concurrency();
-		for (unsigned i = 0; i < thread_count; ++i) {
-			threads.emplace_back(&ThreadPool::Executor, this);
-		}
-	}
-	~ThreadPool() {
-		done = true;
-		work_available.notify_all();
-		unsigned const thread_count = threads.size();
-		for (unsigned i = 0; i < thread_count; ++i) {
-			threads[i].join();
-		}
-	}
-	void AddTask(std::function<std::string()> const &f) {
-		std::unique_lock<std::mutex> lock(work_q_m);
-		work_q.push(f);
-		//notified = true;
-		work_available.notify_one();
-	}
+	ThreadPool(std::string);
+	~ThreadPool();
+	void AddTask(std::function<std::string()> const &f);
+	void Exit();
+	void Pause();
+	void Resume();
+	int GetRemainTasksCount();
 private:
+	void Executor();
+	void OpenOutputFile(std::string filename);
+
 	std::mutex work_q_m;
 	std::condition_variable work_available;
-
-	std::atomic_bool done;
-	//bool notified = false;
-
+	std::condition_variable paused;
 	std::vector<std::thread> threads;
 	std::queue<std::function<std::string()> > work_q;
-
-	void Executor() {
-		while (true) {
-			std::unique_lock<std::mutex> lock(work_q_m);
-
-			work_available.wait(lock, [this] {
-				return (!work_q.empty() || done);
-			});
-
-			if (done && work_q.empty()) return;
-			
-
-			std::function<std::string()> f = std::move(work_q.front());
-
-			work_q.pop();
-			lock.unlock();
-				
-			std::string res = f();
-			lock.lock();
-			std::cout << res << std::endl;
-		}
-	}
+	
+	bool done, exit, pause;
+	std::string output_filename;
+	std::ofstream fout;
 };

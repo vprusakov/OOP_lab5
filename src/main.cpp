@@ -4,20 +4,43 @@
 #include "PrimeFactors.h"
 #include "ThreadPool.h"
 
+void ControlWork(ThreadPool &tpool) {
+	std::string command;
+	while (tpool.GetRemainTasksCount() != 0) {
+		std::cin >> command;
+		if (command == "exit") {
+			tpool.Exit();
+		}
+		else if (command == "pause") {
+			tpool.Pause();
+		}
+		else if (command == "resume") {
+			tpool.Resume();
+		}
+	}
+}
 
-int main() {
+int main(int argc, char *argv[]) {
+	if (argc != 3) {
+		std::cerr << "Wrong Parameters.\n";
+	}
 
-	std::ifstream file("../in.txt");
+	std::ifstream fin(argv[1]);
+	if (!fin.is_open()) {
+		std::cerr << "Input file can't be read.\n";
+	}
 
 	uint64_t number;
+	ThreadPool tpool(argv[2]);
 
-	ThreadPool tpool;
-
-	while (file >> number) {
+	while (fin >> number) {
 		tpool.AddTask( [number] () -> std::string {
 			return PrimeFactors(number).ToString();
 		});
 	}
-	system("pause");
+
+	std::thread listening(ControlWork, std::ref(tpool));
+	listening.detach();
+
 	return 0;
 }
